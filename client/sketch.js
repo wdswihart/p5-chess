@@ -7,6 +7,7 @@ let surrenderButton;
 let newGameButton;
 let queensideCastleButton;
 let kingsideCastleButton;
+let enPasseButton;
 
 let grid;
 let playerColor = '';
@@ -19,6 +20,8 @@ let isGameOver = false;
 let kingHasMoved = false;
 let leftRookHasMoved = false;
 let rightRookHasMoved = false;
+let enPasseCapturer;
+let enPasseCapturedPiece;
 
 function evaluateCastling() {
   if (!kingHasMoved) {
@@ -145,6 +148,8 @@ function switchTurn() {
   } else {
     messageP.html('<b>Opponent\'s Turn</b>');
   }
+
+  enPasseButton.attribute('disabled', true);
 }
 
 function resetGridMarkers() {
@@ -328,11 +333,55 @@ function setupCastlingButtons() {
   });
 }
 
+function captureEnPasse() {
+  socket.emit('move', {
+    color: playerColor,
+    oldI: enPasseCapturer.piece.i,
+    newI: enPasseCapturedPiece.piece.i,
+    oldJ: 3,
+    newJ: 2,
+    capture: enPasseCapturedPiece
+  });
+  grid = enPasseCapturer.move(grid, enPasseCapturedPiece.piece.i, 2);
+  grid[enPasseCapturedPiece.piece.i][3].piece = null;
+  enPasseCapturer = null;
+  enPasseCapturedPiece = null;
+  switchTurn();
+}
+
+function checkEnPasse(opponentPiece) {
+  if (opponentPiece.piece.color != playerColor) {
+    if (opponentPiece.constructor.name === 'Pawn') {
+      if (opponentPiece.piece.j === 3 && opponentPiece.moveCount === 1) {
+        for (let i = 0; i < grid.length; i++) {
+          if (grid[i][3].piece != null) {
+            if (grid[i][3].piece.piece.color === playerColor) {
+              if (grid[i][3].piece.constructor.name === 'Pawn') {
+                if (
+                  i === opponentPiece.piece.i - 1 || 
+                  i === opponentPiece.piece.i + 1
+                ) {
+                  enPasseCapturer = grid[i][3].piece;
+                  enPasseCapturedPiece = opponentPiece;
+                  enPasseButton.removeAttribute('disabled');
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 function setupDOM() {
   createCanvas(canvasSize, canvasSize);
   messageP = createP();
   messageP.class('message-p');
   setupCastlingButtons();
+  enPasseButton = createButton('En Passe');
+  enPasseButton.mousePressed(captureEnPasse);
+  enPasseButton.attribute('disabled', true);
   createP('');  
   surrenderButton = createButton('Surrender');
   surrenderButton.mousePressed(surrender); 
@@ -369,7 +418,18 @@ function setup() {
         newJ = data.newJ;
       }
       grid = grid[oldI][oldJ].piece.move(grid, newI, newJ);
+      
+      if (data.capture != null) {
+        if (data.capture.piece.color == playerColor) {
+          data.capture.piece.i = grid.length - 1 - data.capture.piece.i;
+          data.capture.piece.j = grid[0].length - 1 - data.capture.piece.j;
+        }
+        if (data.capture.piece.i != newI || data.capture.piece.j != newJ) {
+          grid[data.capture.piece.i][data.capture.piece.j].piece = null;
+        }
+      }
   
+      checkEnPasse(grid[newI][newJ].piece);
       if (
         grid[0][7].piece === null ||
         grid[0][7].piece.constructor.name != 'Rook'

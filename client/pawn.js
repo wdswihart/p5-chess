@@ -1,7 +1,7 @@
 class Pawn {
   constructor(color, i, j, size) {
     this.piece = new Piece(color, i, j, size);
-    this.hasMoved = false;
+    this.moveCount = 0;
     if (this.piece.color === 'black') {
       this.img = loadImage('assets/b-pawn.png');
     } else {
@@ -15,7 +15,7 @@ class Pawn {
       grid[this.piece.i][this.piece.j - 1].piece === null
     ) {
       grid[this.piece.i][this.piece.j - 1].hasMove = true;
-      if (!this.hasMoved) {
+      if (this.moveCount === 0) {
         if (this.piece.j > 1) {
           if (grid[this.piece.i][this.piece.j - 2].piece === null) {
             grid[this.piece.i][this.piece.j - 2].hasMove = true;
@@ -31,12 +31,6 @@ class Pawn {
     ) {
       grid[this.piece.i - 1][this.piece.j - 1].hasCapture = true;
       grid[this.piece.i - 1][this.piece.j - 1].hasMove = true;
-      if (grid[this.piece.i - 1][this.piece.j - 1].piece.constructor.name === 'King') {
-        grid[this.piece.i - 1][this.piece.j - 1].piece.isInCheck = true;
-        this.piece.isChecking = true;
-      } else if (grid[this.piece.i - 1][this.piece.j - 1].piece.piece.isChecking) {
-        this.piece.canSave = true;
-      }
     }
     if (
       this.piece.i < grid.length - 1 &&
@@ -46,11 +40,6 @@ class Pawn {
     ) {
       grid[this.piece.i + 1][this.piece.j - 1].hasCapture = true;
       grid[this.piece.i + 1][this.piece.j - 1].hasMove = true;
-      if (grid[this.piece.i + 1][this.piece.j - 1].piece.constructor.name === 'King') {
-        this.piece.isChecking = true;
-      } else if (grid[this.piece.i + 1][this.piece.j - 1].piece.piece.isChecking) {
-        this.piece.canSave = true;
-      }
     }
 
     return grid;
@@ -58,9 +47,9 @@ class Pawn {
 
   move(grid, i, j) {
     if (j === 6) {
-      this.hasMoved = false;
+      this.moveCount = 0;
     } else {
-      this.hasMoved = true;
+      this.moveCount++;
     }
     grid[this.piece.i][this.piece.j].piece = null;
     this.piece.i = i;
