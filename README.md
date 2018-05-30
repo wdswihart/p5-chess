@@ -1,6 +1,6 @@
 # p5 Chess
 
-A local network chess game
+A local network chess game using **socket.io** and **p5.js**
 
 # How to Start Playing
 
