@@ -3,11 +3,15 @@ let socket;
 let cellSize = 60;
 let canvasSize = cellSize * 8;
 let messageP;
+let gameControlDiv;
 let surrenderButton;
 let newGameButton;
 let queensideCastleButton;
 let kingsideCastleButton;
 let enPasseButton;
+let chatList;
+let chatInput;
+let chatSendButton;
 
 let grid;
 let playerColor = '';
@@ -227,6 +231,58 @@ function surrender() {
   }
 }
 
+function captureEnPasse() {
+  socket.emit('move', {
+    color: playerColor,
+    oldI: enPasseCapturer.piece.i,
+    newI: enPasseCapturedPiece.piece.i,
+    oldJ: 3,
+    newJ: 2,
+    capture: enPasseCapturedPiece
+  });
+  grid = enPasseCapturer.move(grid, enPasseCapturedPiece.piece.i, 2);
+  grid[enPasseCapturedPiece.piece.i][3].piece = null;
+  enPasseCapturer = null;
+  enPasseCapturedPiece = null;
+  switchTurn();
+}
+
+function checkEnPasse(opponentPiece) {
+  if (opponentPiece.piece.color != playerColor) {
+    if (opponentPiece.constructor.name === 'Pawn') {
+      if (opponentPiece.piece.j === 3 && opponentPiece.moveCount === 1) {
+        for (let i = 0; i < grid.length; i++) {
+          if (grid[i][3].piece != null) {
+            if (grid[i][3].piece.piece.color === playerColor) {
+              if (grid[i][3].piece.constructor.name === 'Pawn') {
+                if (
+                  i === opponentPiece.piece.i - 1 || 
+                  i === opponentPiece.piece.i + 1
+                ) {
+                  enPasseCapturer = grid[i][3].piece;
+                  enPasseCapturedPiece = opponentPiece;
+                  enPasseButton.removeAttribute('disabled');
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+function sendChat() {
+  if (chatInput.value() != '') {
+    let chatItem = createElement('li', '<i>You: </i><b>' + chatInput.value() +'</b>');
+    chatItem.class('your-chat');
+    chatItem.parent(chatList);
+    socket.emit('chat', chatInput.value());
+    chatInput.value('');
+  }
+  chatInput.elt.focus();
+}
+
 function setupNewGame() {
   isGameOver = false;
   turnPlayerColor = 'white';
@@ -333,58 +389,47 @@ function setupCastlingButtons() {
   });
 }
 
-function captureEnPasse() {
-  socket.emit('move', {
-    color: playerColor,
-    oldI: enPasseCapturer.piece.i,
-    newI: enPasseCapturedPiece.piece.i,
-    oldJ: 3,
-    newJ: 2,
-    capture: enPasseCapturedPiece
-  });
-  grid = enPasseCapturer.move(grid, enPasseCapturedPiece.piece.i, 2);
-  grid[enPasseCapturedPiece.piece.i][3].piece = null;
-  enPasseCapturer = null;
-  enPasseCapturedPiece = null;
-  switchTurn();
-}
-
-function checkEnPasse(opponentPiece) {
-  if (opponentPiece.piece.color != playerColor) {
-    if (opponentPiece.constructor.name === 'Pawn') {
-      if (opponentPiece.piece.j === 3 && opponentPiece.moveCount === 1) {
-        for (let i = 0; i < grid.length; i++) {
-          if (grid[i][3].piece != null) {
-            if (grid[i][3].piece.piece.color === playerColor) {
-              if (grid[i][3].piece.constructor.name === 'Pawn') {
-                if (
-                  i === opponentPiece.piece.i - 1 || 
-                  i === opponentPiece.piece.i + 1
-                ) {
-                  enPasseCapturer = grid[i][3].piece;
-                  enPasseCapturedPiece = opponentPiece;
-                  enPasseButton.removeAttribute('disabled');
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
 function setupDOM() {
   createCanvas(canvasSize, canvasSize);
+
   messageP = createP();
   messageP.class('message-p');
+
+  let movementButtonsDiv = createDiv('');
+  movementButtonsDiv.class('movement-buttons-div');
   setupCastlingButtons();
+  kingsideCastleButton.parent(movementButtonsDiv);  
+  queensideCastleButton.parent(movementButtonsDiv);
   enPasseButton = createButton('En Passe');
   enPasseButton.mousePressed(captureEnPasse);
   enPasseButton.attribute('disabled', true);
-  createP('');  
+  enPasseButton.parent(movementButtonsDiv);
+
+  gameControlDiv = createDiv('');
+  gameControlDiv.class('game-control-div');
   surrenderButton = createButton('Surrender');
-  surrenderButton.mousePressed(surrender); 
+  surrenderButton.mousePressed(surrender);
+  surrenderButton.class('surrender-button');
+  surrenderButton.parent(gameControlDiv);
+
+  let chatListDiv = createDiv('');
+  chatListDiv.class('chat-list-div');
+  chatList = createElement('ul');  
+  chatList.parent(chatListDiv);  
+  let chatInputDiv = createDiv('');
+  chatInputDiv.class('chat-input-div');
+  chatInput = createInput();
+  chatInput.elt.addEventListener('keyup', event => {
+    if (event.keyCode === 13) {
+      sendChat();
+    }
+  });
+  chatInput.parent(chatInputDiv);
+  chatInput.elt.focus();
+  chatSendButton = createButton('Send');
+  chatSendButton.class('chat-send-button');  
+  chatSendButton.mousePressed(sendChat);
+  chatSendButton.parent(chatInputDiv);
 }
 
 function setup() {
@@ -478,11 +523,17 @@ function setup() {
       newGameButton.attribute('disabled', true);
       messageP.html('<b>Requested new game.</b>')
     });
+    newGameButton.parent(gameControlDiv);
     surrenderButton.attribute('disabled', true);
   });
   socket.on('new game', () => {
     playerColor = opponentColor;
     setupNewGame();
+  });
+  socket.on('chat', message => {
+    let chatItem = createElement('li', '<i>Opponent:</i> <b>' + message + '</b>');
+    chatItem.class('opponent-chat');
+    chatItem.parent(chatList);
   });
 }
 

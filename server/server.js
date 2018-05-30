@@ -89,6 +89,10 @@ io.on('connection', socket => {
       }
     }
   });
+
+  socket.on('chat', message => {
+    socket.broadcast.emit('chat', message);
+  });
 });
 
 server.listen(port, () => {
