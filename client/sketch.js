@@ -397,11 +397,9 @@ function setup() {
       setupNewGame();
     }
   });
-
   socket.on('player left', () => {
     socket.emit('remaining player', playerColor);
   });
-
   socket.on('move', data => {
     switchTurn();    
     if (data != null) {
@@ -418,7 +416,7 @@ function setup() {
         newJ = data.newJ;
       }
       grid = grid[oldI][oldJ].piece.move(grid, newI, newJ);
-      
+
       if (data.capture != null) {
         if (data.capture.piece.color == playerColor) {
           data.capture.piece.i = grid.length - 1 - data.capture.piece.i;
@@ -461,7 +459,6 @@ function setup() {
       resetGridMarkers();
     }
   });
-
   socket.on('game over', winnerColor => {
     isGameOver = true;
     turnPlayerColor = '';
@@ -483,7 +480,6 @@ function setup() {
     });
     surrenderButton.attribute('disabled', true);
   });
-
   socket.on('new game', () => {
     playerColor = opponentColor;
     setupNewGame();

@@ -2,6 +2,22 @@
 
 A local network chess game
 
+# How to Start Playing
+
+With **node.js** installed, you can start a server with:
+
+```
+npm start
+```
+
+or
+
+```
+node server/server.js
+```
+
+Navigate to port 3000 in your browser to play.
+
 # License
 
 Copyright 2018 William Swihart
