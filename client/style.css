@@ -1,0 +1,11 @@
+body {
+  background-color: lightblue;
+}
+
+canvas {
+  border: 4px solid black;
+}
+
+.message-p {
+  font-size: 2em;
+}
