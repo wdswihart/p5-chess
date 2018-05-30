@@ -31,40 +31,40 @@ function evaluateCastling() {
   if (!kingHasMoved) {
     if (queenI < kingI) {
       if (!leftRookHasMoved) {
-        queensideCastleButton.removeAttribute('disabled');
+        queensideCastleButton.elt.disabled = false;
         for (let i = kingI - 1; i > 0; i--) {
           if (grid[i][7].piece != null) {
-            queensideCastleButton.attribute('disabled', true);
+            queensideCastleButton.elt.disabled = true;
           }
         }
       }
       if (!rightRookHasMoved) {
-        kingsideCastleButton.removeAttribute('disabled');
+        kingsideCastleButton.elt.disabled = false;
         for (let i = kingI + 1; i < grid.length - 1; i++) {
           if (grid[i][7].piece != null) {
-            kingsideCastleButton.attribute('disabled', true);
-          }
+            kingsideCastleButton.elt.disabled = true;
         }
       }
-    } else {
-      if (!leftRookHasMoved) {
-        kingsideCastleButton.removeAttribute('disabled');
-        for (let i = kingI - 1; i > 0; i--) {
-          if (grid[i][7].piece != null) {
-            kingsideCastleButton.attribute('disabled', true);
+      } else {
+        if (!leftRookHasMoved) {
+          kingsideCastleButton.elt.disabled = false;
+          for (let i = kingI - 1; i > 0; i--) {
+            if (grid[i][7].piece != null) {
+              kingsideCastleButton.elt.disabled = true;
+            }
           }
         }
-      }
-      if (!rightRookHasMoved) {
-        queensideCastleButton.removeAttribute('disabled');
-        for (let i = kingI + 1; i < grid.length - 1; i++) {
-          if (grid[i][7].piece != null) {
-            queensideCastleButton.attribute('disabled', true);
+        if (!rightRookHasMoved) {
+          queensideCastleButton.elt.disabled = false;
+          for (let i = kingI + 1; i < grid.length - 1; i++) {
+            if (grid[i][7].piece != null) {
+              queensideCastleButton.elt.disabled = true;
+            }
           }
         }
       }
     }
-  }
+  } 
 }
 
 function mouseClicked() {
@@ -108,6 +108,15 @@ function mouseClicked() {
                         resetGridMarkers();
                         messageP.html('<b>Your Turn! You must uncheck your king.</b>');
                       } else {
+                        if (grid[i][j].piece.constructor.name === 'King') {
+                          kingHasMoved = true;
+                        } else if (grid[i][j].piece.constructor.name === 'Rook') {
+                          if (move.oldI === 0) {
+                            leftRookHasMoved = true;
+                          } else if (move.oldI === 7) {
+                            rightRookHasMoved = true;
+                          }
+                        } 
                         socket.emit('move', move);
                         switchTurn();
                         resetGridMarkers();
@@ -153,7 +162,7 @@ function switchTurn() {
     messageP.html('<b>Opponent\'s Turn</b>');
   }
 
-  enPasseButton.attribute('disabled', true);
+  enPasseButton.elt.disabled = true;
 }
 
 function resetGridMarkers() {
@@ -261,7 +270,7 @@ function checkEnPasse(opponentPiece) {
                 ) {
                   enPasseCapturer = grid[i][3].piece;
                   enPasseCapturedPiece = opponentPiece;
-                  enPasseButton.removeAttribute('disabled');
+                  enPasseButton.elt.disabled = false;
                 }
               }
             }
@@ -296,13 +305,13 @@ function setupNewGame() {
   if (newGameButton != null) {
     newGameButton.remove();
   }
-  surrenderButton.removeAttribute('disabled');
+  surrenderButton.elt.disabled = false;
   initializeGrid();
 }
 
 function setupCastlingButtons() {
   kingsideCastleButton = createButton('Kingside Castle');
-  kingsideCastleButton.attribute('disabled', true);
+  kingsideCastleButton.elt.disabled = true;
   kingsideCastleButton.mousePressed(() => {
     let oldRookI, newRookI;
     let oldKingI = kingI;
@@ -323,7 +332,7 @@ function setupCastlingButtons() {
         rightRookHasMoved = true;
       }
       kingHasMoved = true;      
-      kingsideCastleButton.attribute('disabled', true);      
+      kingsideCastleButton.elt.disabled = true;      
       switchTurn();
       socket.emit('move', {
         color: playerColor,
@@ -345,7 +354,7 @@ function setupCastlingButtons() {
     }
   });
   queensideCastleButton = createButton('Queenside Castle');
-  queensideCastleButton.attribute('disabled', true); 
+  queensideCastleButton.elt.disabled = true; 
   queensideCastleButton.mousePressed(() => {
     if (turnPlayerColor === playerColor) {
       let newKingI, oldRookI, newRookI;
@@ -366,7 +375,7 @@ function setupCastlingButtons() {
         rightRookHasMoved = true;
       }
       kingHasMoved = true;
-      queensideCastleButton.attribute('disabled', true);
+      queensideCastleButton.elt.disabled = true;
       switchTurn();
       socket.emit('move', {
         color: playerColor,
@@ -402,7 +411,7 @@ function setupDOM() {
   queensideCastleButton.parent(movementButtonsDiv);
   enPasseButton = createButton('En Passe');
   enPasseButton.mousePressed(captureEnPasse);
-  enPasseButton.attribute('disabled', true);
+  enPasseButton.elt.disabled = true;
   enPasseButton.parent(movementButtonsDiv);
 
   gameControlDiv = createDiv('');
@@ -520,14 +529,16 @@ function setup() {
     newGameButton = createButton('New Game');
     newGameButton.mousePressed(() => {
       socket.emit('request new game', playerColor);
-      newGameButton.attribute('disabled', true);
+      newGameButton.elt.disabled = true;
       messageP.html('<b>Requested new game.</b>')
     });
     newGameButton.parent(gameControlDiv);
-    surrenderButton.attribute('disabled', true);
+    surrenderButton.elt.disabled = true;
   });
   socket.on('new game', () => {
+    let temp = playerColor;
     playerColor = opponentColor;
+    opponentColor = temp;
     setupNewGame();
   });
   socket.on('chat', message => {
