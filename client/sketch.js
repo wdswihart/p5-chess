@@ -5,14 +5,60 @@ let canvasSize = cellSize * 8;
 let messageP;
 let surrenderButton;
 let newGameButton;
+let queensideCastleButton;
+let kingsideCastleButton;
 
 let grid;
 let playerColor = '';
 let opponentColor = '';
 let turnPlayerColor = 'white';
-let isGameOver = false;
 let kingI;
-let kingJ = 7;
+let kingJ;
+let queenI;
+let isGameOver = false;
+let kingHasMoved = false;
+let leftRookHasMoved = false;
+let rightRookHasMoved = false;
+
+function evaluateCastling() {
+  if (!kingHasMoved) {
+    if (queenI < kingI) {
+      if (!leftRookHasMoved) {
+        queensideCastleButton.removeAttribute('disabled');
+        for (let i = kingI - 1; i > 0; i--) {
+          if (grid[i][7].piece != null) {
+            queensideCastleButton.attribute('disabled', true);
+          }
+        }
+      }
+      if (!rightRookHasMoved) {
+        kingsideCastleButton.removeAttribute('disabled');
+        for (let i = kingI + 1; i < grid.length - 1; i++) {
+          if (grid[i][7].piece != null) {
+            kingsideCastleButton.attribute('disabled', true);
+          }
+        }
+      }
+    } else {
+      if (!leftRookHasMoved) {
+        kingsideCastleButton.removeAttribute('disabled');
+        for (let i = kingI - 1; i > 0; i--) {
+          if (grid[i][7].piece != null) {
+            kingsideCastleButton.attribute('disabled', true);
+          }
+        }
+      }
+      if (!rightRookHasMoved) {
+        queensideCastleButton.removeAttribute('disabled');
+        for (let i = kingI + 1; i < grid.length - 1; i++) {
+          if (grid[i][7].piece != null) {
+            queensideCastleButton.attribute('disabled', true);
+          }
+        }
+      }
+    }
+  }
+}
 
 function mouseClicked() {
   if (playerColor === turnPlayerColor && !isGameOver) {
@@ -58,6 +104,7 @@ function mouseClicked() {
                         socket.emit('move', move);
                         switchTurn();
                         resetGridMarkers();
+                        evaluateCastling();
                       }
                       k = i = grid.length;
                       l = j = grid[0].length;
@@ -136,7 +183,6 @@ function initializeGrid() {
     }
   }
 
-  let queenI;
   if (playerColor === 'white') {
     kingI = 3;
     queenI = 4;
@@ -144,6 +190,7 @@ function initializeGrid() {
     kingI = 4;
     queenI = 3;
   }
+  kingJ = 7;
 
   for (let i = 0; i < grid.length; i++) {
     grid[i][1].piece = new Pawn(opponentColor, i, 1, cellSize);
@@ -177,6 +224,7 @@ function surrender() {
 
 function setupNewGame() {
   isGameOver = false;
+  turnPlayerColor = 'white';
   if (playerColor === 'white') {
     opponentColor = 'black';
     messageP.html('<b>Your Turn!</b>');
@@ -191,12 +239,107 @@ function setupNewGame() {
   initializeGrid();
 }
 
-function setup() {
+function setupCastlingButtons() {
+  kingsideCastleButton = createButton('Kingside Castle');
+  kingsideCastleButton.attribute('disabled', true);
+  kingsideCastleButton.mousePressed(() => {
+    let oldRookI, newRookI;
+    let oldKingI = kingI;
+    if (turnPlayerColor === playerColor) {
+      if (queenI > kingI) {
+        grid = grid[kingI][kingJ].piece.move(grid, 1, 7);
+        grid = grid[0][7].piece.move(grid, 2, 7);
+        kingI = 1;
+        oldRookI = 0;
+        newRookI = 2;
+        leftRookHasMoved = true;
+      } else {
+        grid = grid[kingI][kingJ].piece.move(grid, 6, 7);
+        grid = grid[7][7].piece.move(grid, 5, 7);
+        kingI = 6;
+        oldRookI = 7;
+        newRookI = 5;
+        rightRookHasMoved = true;
+      }
+      kingHasMoved = true;      
+      kingsideCastleButton.attribute('disabled', true);      
+      switchTurn();
+      socket.emit('move', {
+        color: playerColor,
+        oldI: oldKingI,
+        oldJ: 7,
+        newI: kingI,
+        newJ: 7,
+        capture: null
+      });
+      socket.emit('move', {
+        color: playerColor,
+        oldI: oldRookI,
+        oldJ: 7,
+        newI: newRookI,
+        newJ: 7,
+        capture: null
+      });
+      socket.emit('move', null);
+    }
+  });
+  queensideCastleButton = createButton('Queenside Castle');
+  queensideCastleButton.attribute('disabled', true); 
+  queensideCastleButton.mousePressed(() => {
+    if (turnPlayerColor === playerColor) {
+      let newKingI, oldRookI, newRookI;
+      let oldKingI = kingI;
+      if (queenI < kingI) {
+        grid = grid[kingI][kingJ].piece.move(grid, 2, 7);
+        grid = grid[0][7].piece.move(grid, 3, 7);
+        oldRookI = 0;
+        newRookI = 3;
+        kingI = 2;
+        leftRookHasMoved = true;
+      } else {
+        grid = grid[kingI][kingJ].piece.move(grid, 5, 7);
+        grid = grid[7][7].piece.move(grid, 4, 7);
+        kingI = 5;
+        oldRookI = 7;
+        newRookI = 4;
+        rightRookHasMoved = true;
+      }
+      kingHasMoved = true;
+      queensideCastleButton.attribute('disabled', true);
+      switchTurn();
+      socket.emit('move', {
+        color: playerColor,
+        oldI: oldKingI,
+        oldJ: 7,
+        newI: kingI,
+        newJ: 7,
+        capture: null
+      });
+      socket.emit('move', {
+        color: playerColor,
+        oldI: oldRookI,
+        oldJ: 7,
+        newI: newRookI,
+        newJ: 7,
+        capture: null
+      });
+      socket.emit('move', null);
+    }
+  });
+}
+
+function setupDOM() {
   createCanvas(canvasSize, canvasSize);
   messageP = createP();
   messageP.class('message-p');
+  setupCastlingButtons();
+  createP('');  
   surrenderButton = createButton('Surrender');
-  surrenderButton.mousePressed(surrender);
+  surrenderButton.mousePressed(surrender); 
+}
+
+function setup() {
+  setupDOM();
 
   socket = io();
   socket.on('player joined', player => {
@@ -211,46 +354,66 @@ function setup() {
   });
 
   socket.on('move', data => {
-    let oldI, oldJ, newI, newJ;
-    if (data.color != playerColor) {
-      oldI = grid.length - 1 - data.oldI;
-      oldJ = grid[0].length - 1 - data.oldJ;
-      newI = grid.length - 1 - data.newI;
-      newJ = grid[0].length - 1 - data.newJ;
-    } else {
-      oldI = data.oldI;
-      oldJ = data.oldJ;
-      newI = data.newI;
-      newJ = data.newJ;
+    switchTurn();    
+    if (data != null) {
+      let oldI, oldJ, newI, newJ;
+      if (data.color != playerColor) {
+        oldI = grid.length - 1 - data.oldI;
+        oldJ = grid[0].length - 1 - data.oldJ;
+        newI = grid.length - 1 - data.newI;
+        newJ = grid[0].length - 1 - data.newJ;
+      } else {
+        oldI = data.oldI;
+        oldJ = data.oldJ;
+        newI = data.newI;
+        newJ = data.newJ;
+      }
+      grid = grid[oldI][oldJ].piece.move(grid, newI, newJ);
+  
+      if (
+        grid[0][7].piece === null ||
+        grid[0][7].piece.constructor.name != 'Rook'
+      ) {
+        leftRookHasMoved = true;
+      }
+      if (
+        grid[7][7].piece === null || 
+        grid[7][7].piece.constructor.name != 'Rook'
+      ) {
+        rightRookHasMoved = true;
+      }
+      if (
+        grid[newI][newJ].piece.constructor.name === 'King' &&
+        grid[newI][newJ].piece.piece.color === playerColor
+      ) {
+        kingI = newI;
+        kingJ = newJ;
+        kingHasMoved = true;
+      }
+  
+      grid = grid[kingI][kingJ].piece.revealMoves(grid);
+      grid = grid[kingI][kingJ].piece.validateMoves(grid);
+      if (grid[kingI][kingJ].piece.isInCheck && grid[kingI][kingJ].piece.moveCount === 0) {
+        socket.emit('game over', opponentColor);
+      }
+  
+      evaluateCastling();    
+      resetGridMarkers();
     }
-    grid = grid[oldI][oldJ].piece.move(grid, newI, newJ);
-
-    if (
-      grid[newI][newJ].piece.constructor.name === 'King' &&
-      grid[newI][newJ].piece.piece.color === playerColor
-    ) {
-      kingI = newI;
-      kingJ = newJ;
-    }
-
-    grid = grid[kingI][kingJ].piece.revealMoves(grid);
-    grid = grid[kingI][kingJ].piece.validateMoves(grid);
-    if (grid[kingI][kingJ].piece.isInCheck && grid[kingI][kingJ].piece.moveCount === 0) {
-      isGameOver = true;
-      messageP.html('Checkmate! You lose.');
-    }
-
-    resetGridMarkers();
-    switchTurn();
   });
 
   socket.on('game over', winnerColor => {
     isGameOver = true;
-    messageP.html('<b>Game over!</b>');
-    if (winnerColor === playerColor) {
-      messageP.html(messageP.html() + ' <b>You won!</b>');
+    turnPlayerColor = '';
+    if (grid[kingI][kingJ].piece.isInCheck && grid[kingI][kingJ].piece.moveCount === 0) {
+      messageP.html('<b>Checkmate! Your opponent won.</b>')
     } else {
-      messageP.html(messageP.html() + ' <b>Your opponent won.</b>');
+      messageP.html('<b>Game over!</b>');
+      if (winnerColor === playerColor) {
+        messageP.html(messageP.html() + ' <b>You won!</b>');
+      } else {
+        messageP.html(messageP.html() + ' <b>Your opponent won.</b>');
+      }
     }
     newGameButton = createButton('New Game');
     newGameButton.mousePressed(() => {
